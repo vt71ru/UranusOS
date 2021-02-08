@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# Copyright (C) 2021
+
+function init() {
+echo -e "Begin....."
+
+# Check boot type bios or uefi
+if [ -d /sys/firmware/efi ]; then
+    UEFI=true
+	echo "UEFI is present"
+else
+	BIOS=true
+	echo "BIOS is present"
+fi
+
+# Check CPU
+
+# Check virtual env
+echo -e "Check virtual environment"
+  case "$(systemd-detect-virt)" in
+  oracle)
+	echo "Oracle virtual box is present"
+    virt="vbox"
+    VM=true
+    ;;
+  vmware)
+	echo "Vmware workstation is present"
+    virt="vmware"
+    VM=true
+    ;;
+  qemu)
+    virt="qemu"
+    echo "QUEMU is present"
+    VM=true
+    ;;
+  kvm)
+    virt="kvm"
+    echo "kvm is present"
+    VM=true
+    ;;
+  microsoft)
+    virt="hyper-v"
+    echo "microsoft hyper-v is present"
+    VM=true
+    ;;
+  xen)
+    virt="xen"
+    echo "Xen is present"
+    VM=true
+    ;;
+  esac
+
+# Check for laptop
+if [ -d /sys/class/power_supply/BAT0 ]; then
+  Laptop=true
+  echo -e "Laptop is present"
+fi
+
+# Check vga card vendor 
+if ! "${VM}"; then
+   if (lspci | grep VGA | grep "Intel" &>/dev/null); then
+      default_GPU="xf86-video-intel"
+      chipset="Intel"
+   elif (lspci | grep VGA | grep "ATI\|AMD" &>/dev/null); then
+      default_GPU="xf86-video-ati"
+      chipset="AMD/ATI"
+   elif (lspci | grep VGA | grep "NVIDIA\|nVidia" &>/dev/null); then
+    NVIDIA=true default_GPU="xf86-video-nouveau"
+    chipset="Nvidia"
+  else
+    default_GPU="xf86-video-vesa"
+    chipset="Unknown"
+  fi
+fi
+
+# Check if install media is USB
+if (lsblk | grep "run" | grep -o "sd." &>/dev/null); then
+  USB="$(lsblk | grep "run" | grep -o "sd.")"
+  echo $USB
+fi
+
+# Check for bluetooth device
+if (dmesg | grep -i "blue" &>/dev/null); then
+  bluetooth=true
+  echo -e "Bluetooth is present"
+fi
+
+
+echo -e "Start pseudographic setup"
+}
+
+function set_locale() {
+# Full list of locales
+localelist=$(grep -E "^#?[a-z].*UTF-8" /etc/locale.gen | sed 's/#//' | awk '{print $1" -"}')
+locales=$(dialog --ok-button "$ok" --cancel-button "$cancel" --menu "$locale_msg" 18 60 11 $localelist 3>&1 1>&2 2>&3)
+}
+
+function setup() {
+lang
+set_locale
+connection
+}
+
+init
+setup
