@@ -12,9 +12,7 @@ else
 	BIOS=true
 	echo "BIOS is present"
 fi
-
 # Check CPU
-
 # Check virtual env
 echo -e "Check virtual environment"
   case "$(systemd-detect-virt)" in
@@ -55,7 +53,6 @@ if [ -d /sys/class/power_supply/BAT0 ]; then
   Laptop=true
   echo -e "Laptop is present"
 fi
-
 # Check vga card vendor 
 if ! "${VM}"; then
    if (lspci | grep VGA | grep "Intel" &>/dev/null); then
@@ -85,21 +82,95 @@ if (dmesg | grep -i "blue" &>/dev/null); then
   echo -e "Bluetooth is present"
 fi
 
-
 echo -e "Start pseudographic setup"
 }
 
-function set_locale() {
-# Full list of locales
-localelist=$(grep -E "^#?[a-z].*UTF-8" /etc/locale.gen | sed 's/#//' | awk '{print $1" -"}')
-locales=$(dialog --ok-button "$ok" --cancel-button "$cancel" --menu "$locale_msg" 18 60 11 $localelist 3>&1 1>&2 2>&3)
+function set_keyboard() {
+
+lang=$(dialog  --backtitle "Uranus installer project" --title "Select a language" \
+        --menu "Choose the language to be used to installation process.
+        Language:" 20 51 4 \
+        "Danish"     " -  Dansk    "   \
+        "English"    " -  USA      "   \
+        "Estonian"   " -  Eesti    "   \
+        "French"     " -  Français "   \
+        "Russian"    " -  Русский  " 3>&1 1>&2 2>&3)
+
+case "$lang" in
+   Danish)
+    loadkeys dk-latin1
+    ;;
+   English)
+    loadkeys us
+    ;;
+   Estonian)
+    echo "Sloow cow"
+    ;;
+   French)
+    loadkeys fr-latin1
+    ;;
+   Russian)
+    loadkeys ru
+    ;;
+esac
+
 }
 
-function setup() {
-lang
-set_locale
-connection
+function set_font() { 
+
+dialog --clear --backtitle "$backtitle" --title "Set font" --msgbox "set font cyr-sun16" 0 0
+setfont cyr-sun16
+
 }
+
+function set_locale() {
+
+localelist="$(grep -E "^#?[a-z].*" /etc/locale.gen)"
+ 
+tmpfile=$(mktemp /tmp/tempXXX.tmp)
+ 
+while read -r line; do
+eval $(echo "$line" | awk '{print "var1="$1";var2="$2}')
+    fchar="${line:0:1}"
+    sep="#"
+    end="\\"
+    if [ "$fchar" = "$sep" ];
+    then
+    prz="TRUE"
+    var3=$(echo "$var1" | grep -Po '^.{1}\K.*')
+    str2="$prz \"$var3\" \"$var2\" "
+    echo $str2 >>tempXXX.tmp
+    else
+    prz="FALSE"
+    str3="$prz \"$var1\" \"$var2\" "
+    echo $str3 >> tempXXX.tmp
+    fi
+done <<< "$localelist"
+
+
+locales=$(dialog --backtitle="$backtitle" --title "Do you want to" --checklist "Do you want to" 15 60 4 \
+--file tempXXX.tmp 3>&1 1>&2 2>&3)
+
+exitstatus=$?
+if [ $exitstatus = 0 ]; then
+    #echo "Your favorite distros are:$DISTROS\n"  > loc
+    for locale in $locales
+    do
+        sed -i -e 's/3$locale/$locale/g' /etc/locale.gen
+    done
+fi
+
+locale-gen
+
+rm tempXXX.tmp
+}
+
+function start() {
+set_keyboard
+set_font
+set_locale
+}
+
 
 init
-setup
+start
