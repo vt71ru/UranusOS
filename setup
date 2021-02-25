@@ -16,7 +16,7 @@ fi
 # Check virtual env
 echo -e "Check virtual environment"
   case "$(systemd-detect-virt)" in
-  oracle)
+    oracle)
 	echo "Oracle virtual box is present"
     virt="vbox"
     VM=true
@@ -136,27 +136,25 @@ eval $(echo "$line" | awk '{print "var1="$1";var2="$2}')
     end="\\"
     if [ "$fchar" = "$sep" ];
     then
-    prz="TRUE"
+    prz="off"
     var3=$(echo "$var1" | grep -Po '^.{1}\K.*')
-    str2="$prz \"$var3\" \"$var2\" "
-    echo $str2 >>tempXXX.tmp
+    str2=" \"$var3\" \"$var2\" $prz \\"
+    echo $str2 >> tempXXX.tmp
     else
-    prz="FALSE"
-    str3="$prz \"$var1\" \"$var2\" "
+    prz="on"
+    str3=" \"$var1\" \"$var2\" $prz \\"
     echo $str3 >> tempXXX.tmp
     fi
 done <<< "$localelist"
 
-
-locales=$(dialog --backtitle="$backtitle" --title "Do you want to" --checklist "Do you want to" 15 60 4 \
+locales=$(dialog --backtitle "$backtitle" --title "Do you want to" --checklist "Do you want to" 15 60 4 \
 --file tempXXX.tmp 3>&1 1>&2 2>&3)
 
 exitstatus=$?
 if [ $exitstatus = 0 ]; then
-    #echo "Your favorite distros are:$DISTROS\n"  > loc
     for locale in $locales
-    do
-        sed -i -e 's/3$locale/$locale/g' /etc/locale.gen
+    do  
+        sed -i -e "s/#${locale}/${locale}/"	/etc/locale.gen
     done
 fi
 
@@ -166,9 +164,10 @@ rm tempXXX.tmp
 }
 
 function start() {
-set_keyboard
-set_font
 set_locale
+set_font
+set_keyboard
+
 }
 
 
